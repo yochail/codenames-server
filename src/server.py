@@ -3,12 +3,13 @@ import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-import word2vec as w2v
+from src import word2vec as w2v
 
 lib = os.getenv('LIB')
 if not lib:
     lib="wiki2vec"
-wv = w2v.gensim_from_vsmlib("./data/" + lib)
+#wv = w2v.gensim_from_vsmlib("../data/" + lib)
+wv = w2v.load_word2vec_format("../data/" + lib)
 
 app = Flask(__name__)
 CORS(app)

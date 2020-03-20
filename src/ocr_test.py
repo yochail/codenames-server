@@ -2,7 +2,7 @@ import unittest
 from os import path
 
 from PIL import Image
-import ocr
+from src import ocr
 
 
 class MyTestCase(unittest.TestCase):

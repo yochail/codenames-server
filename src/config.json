@@ -1,0 +1,10 @@
+{
+  "translator":{
+    "type": "microsofttranslator",
+    "host": "https://api-eur.cognitive.microsofttranslator.com",
+    "dictionary": "dictionary/lookup",
+    "translate": "translate",
+    "query": "api-version=3.0&from={0}&to={1}",
+    "secret": "<secret key>"
+  }
+}

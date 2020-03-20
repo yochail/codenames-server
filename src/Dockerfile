@@ -13,7 +13,7 @@ RUN pip install -r requirements.txt
 #FLASK SERVER CONFIGURATION FILE
 #COPY data/gold ./data/gold
 #COPY data/twitter ./data/twitter
-COPY data/wiki2vec ./data/wiki2vec
+COPY ../data/wiki2vec ./data/wiki2vec
 
 COPY server.py ./
 COPY word2vec.py ./

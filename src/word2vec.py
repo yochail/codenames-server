@@ -1,9 +1,25 @@
 import itertools
 import json
 import os
+import traceback
+from typing import Iterable, Tuple
+
+import numpy
 from gensim.models import KeyedVectors, Word2Vec
 from gensim.models.fasttext import load_facebook_model
 import numpy as np
+
+
+class NGramSimilarityDict:
+    def __init__(self):
+        self.dict = {}
+
+    def add(self, w1, w2, sim):
+        self.dict[hash(w1) + hash(w2)] = sim
+
+    def get(self, n_words):
+        bi_grams = set(itertools.combinations(n_words, 2))
+        return numpy.average(list(self.dict[hash(w1) + hash(w2)] for w1, w2 in bi_grams))
 
 
 class Word2Vec:
@@ -32,114 +48,48 @@ class Word2Vec:
 
         self.kv = kv
 
-    def load_word2vec_format(self, path):
-        # vector_path = os.path.join(path,"words300en.npy")
-        vector_path = "/data/wiki2vec/words300en.bz2"
-        kv = KeyedVectors.load_word2vec_format(vector_path, binary=False, unicode_errors='replace')
+    def load_word2vec_format(self, vector_path):
+        file_type = vector_path[-3:]
+        if file_type == "txt" or file_type == "bz2":
+            kv = KeyedVectors.load_word2vec_format(vector_path, binary=False, unicode_errors='replace')
+            kv.save('words100en')
+        else:
+            kv = KeyedVectors.load(vector_path, mmap='r')
         self.kv = kv
 
-    # def find_similar_groups(group,possible_words,top_n,threshhold):
-    #
-    # 	sim = [(wv.similarity(group, w), w) for w in possible_words]
-    # 	sim = sorted(sim, key=lambda v: v[0],)
-    #
-    # 	if possible_words and sim[0][0] > threshhold:
-    # 		return find_similar_groups([s[1] for s in sim[top_n:]],possible_words,top_n,threshhold)
-    # 	else:
-    # 		return sim[top_n:]
-
-    # def merge_similar_groups(wv,sim, top_n,threshhold):
-    # 	scors,words_tup = [zip(*sim)]
-    # 	best_n = sim[:top_n]
-    # 	res = []
-    # 	for t in words_tup:
-    # 		similars = [(s,t) for s in sim if s.intersection(t)]
-    #
-    # 		new_score = wv.similarity(group, w)
-
-    def remove_return(element, list):
-        list.remove(element)
-        return list
-
-    def find_similar_groups(self, possible_words, threshhold):
-        # tuples = [list(x) for x in itertools.combinations(possible_words, 2)]
-        # sim = [(wv.similarity(t[0], t[1]), t) for t in tuples]
-        # sim = sorted(sim, key=lambda v: v[0],)
-        # groups = merge_similar_groups(sim,top_n)
-        #
-        # if possible_words and sim[0][0] > threshhold:
-        # 	return find_similar_groups([s[1] for s in sim[top_n:]],possible_words,top_n,threshhold)
-        # else:
-        # 	return sim[top_n:]
-        score = 0
-        while (score < threshhold and len(possible_words) > 2):
-            score = np.prod(
-                [self.kv.n_similarity(w, self.remove_return(w, list(possible_words))) for w in possible_words])
-            remove_word = self.kv.doesnt_match(possible_words)
-            possible_words.remove(remove_word)
-
-        return possible_words
-
-    def similar_from_list(self, words_def: str, possible_words, num):
-        # normlize data
-        # possible_words = possible_words.flatten()
-        words_def = words_def.lower()
-        possible_words = [w.lower() for w in possible_words]
-
-        sim = np.sort([(self.kv.similarity(words_def, w.lower()), w) for w in possible_words])
-        sim = sorted(sim, key=lambda v: v[0])
-        print(sim)
-        return [w for _, w in sim[-num:]]
-
-    def find_code_words(self, positive, negative, threshhold=0.7, comb_n=4):
-        positive = [p.lower() for p in positive]
-        negative = []  # [p.lower() for p in negative]
-        groups = itertools.combinations(positive, comb_n)
-        code_words = []
-        score = 0
-        for pos_group in groups:
-            res = self.kv.most_similar(pos_group, negative, topn=1)
-            code_words.append((res[0], pos_group))
-
-        code_words = sorted(code_words, key=lambda t: t[0][1])
-        return code_words[-1]
-
-    def create_similarity_matrix(self, positive, negative):
-        words = list(positive) + list(negative)
-        len_pos, len_neg = len(positive), len(negative)
-        mat = np.zeros([len_pos, len_pos + len_neg])
-        for i in range(len_pos):
-            for j in range(len_pos + len_neg):
-                mat[i, j] = self.kv.similarity(words[i], words[j])
-                if (j >= len_pos):
-                    mat[i, j] *= -1
-        return mat
-
-    def find_most_similar(self, groups, key_word):
-        code_words = []
-        for group in groups:
-            res = self.kv.di(key_word, group, topn=1)
-            code_words.append((res[0], group))
-
-        code_words = sorted(code_words, key=lambda t: t[0][1])
-        return code_words[-1]
-
-    def similar_words_for_combination(self, positive, negative, threshhold=0.7, comb_n=4):
-        positive = [p.lower() for p in positive]
-        negative = [p.lower() for p in negative]
-        all_words_dict = positive + negative
-        groups = itertools.combinations(positive, comb_n)
-        code_words = []
-        for pos_group in groups:
-            similarityMatrix = self.create_similarity_matrix(pos_group, negative)
-
-            code_words.append((np.sum(similarityMatrix), pos_group))
-
-        code_words = sorted(code_words, key=lambda t: t[0])
-        words = code_words[-1]
-        word = self.kv.most_similar(words[1])
-        return (words, word)
-
-    def word_similarity(self, word, words_group):
-        scores = ((w, self.kv.similarity(word, w)) for w in words_group)
+    def word_similarity(self, key_group, words_group):
+        scores = []
+        for word in key_group:
+            for w in words_group:
+                try:
+                    score = (w, self.kv.similarity(word, w))
+                except Exception as e:
+                    print(e)
+                    score = (w, 0)
+                scores.append(score)
         return scores
+
+    def create_similarity_dict(self, bi_grams: Iterable[Tuple[str]]) -> NGramSimilarityDict:
+        n_gram_dict = NGramSimilarityDict()
+        for t in bi_grams:
+            t = tuple(t)
+            try:
+                sim = self.kv.similarity(t[0], t[1])
+            except Exception as e:
+                print(e)
+                sim = 0
+            n_gram_dict.add(t[0], t[1], sim)
+        return n_gram_dict
+
+    def get_negative_score_for_group(self, group: Iterable[str], negative: Iterable[str]) -> NGramSimilarityDict:
+        group_avg_vector = numpy.average(tuple(self.kv.get_vector(w) for w in group), axis=0)
+        neg_value = numpy.average(
+            [self.cosine_similarity(self.kv.get_vector(w), group_avg_vector) for w in negative])
+        return neg_value
+
+    def get_similar_for_groups(self, positive: Iterable[str], negative: Iterable[str] = [],
+                               top_n=1) -> NGramSimilarityDict:
+        return self.kv.most_similar(positive, negative, top_n)
+
+    def cosine_similarity(self, v1, v2):
+        return numpy.dot(v1, v2) / (numpy.linalg.norm(v1) * numpy.linalg.norm(v2))

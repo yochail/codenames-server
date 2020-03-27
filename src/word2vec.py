@@ -5,6 +5,7 @@ import traceback
 from typing import Iterable, Tuple
 
 import numpy
+from Levenshtein._levenshtein import distance
 from gensim.models import KeyedVectors, Word2Vec
 from gensim.models.fasttext import load_facebook_model
 import numpy as np
@@ -85,11 +86,14 @@ class Word2Vec:
         group_avg_vector = numpy.average(tuple(self.kv.get_vector(w) for w in group), axis=0)
         neg_value = numpy.average(
             [self.cosine_similarity(self.kv.get_vector(w), group_avg_vector) for w in negative])
-        return neg_value
+        return 0 if np.isnan(neg_value) else neg_value
 
     def get_similar_for_groups(self, positive: Iterable[str], negative: Iterable[str] = [],
                                top_n=1) -> NGramSimilarityDict:
-        return self.kv.most_similar(positive, negative, top_n)
+        most_similar = self.kv.most_similar(positive, negative, top_n * 3, restrict_vocab=250000)
+        # filter too similar words
+        most_similar = [w for w in most_similar if min([distance(w[0], p) for p in positive]) > 3]
+        return most_similar[:top_n]
 
     def cosine_similarity(self, v1, v2):
         return numpy.dot(v1, v2) / (numpy.linalg.norm(v1) * numpy.linalg.norm(v2))

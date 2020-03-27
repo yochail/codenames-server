@@ -9,3 +9,4 @@ numpy==1.17.4
 #pyOpenSSL==19.1.0
 gunicorn
 vsmlib
+python-Levenshtein

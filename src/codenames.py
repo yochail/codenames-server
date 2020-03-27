@@ -1,6 +1,8 @@
 import itertools
 from typing import Iterable, List, Tuple, Any
 
+import Levenshtein._levenshtein as ld
+
 from src.translate import Translate
 from src.word2vec import Word2Vec
 
@@ -29,7 +31,7 @@ class CodeNames:
 
         # return back to source lang
         selecte_idx = [[idx for idx, word_group in enumerate(eng_trans) if word in word_group][0]
-                       for word,_ in selected_eng]
+                       for word, _ in selected_eng]
         selected_source = [words[word_idx] for word_idx in selecte_idx]
 
         return selected_source
@@ -48,7 +50,7 @@ class CodeNames:
         pos_product = list(itertools.product(*eng_trans_pos))
         pos_bi_grams = set(i for sublist in [itertools.combinations(g, 2) for g in pos_product] for i in sublist)
         pos_similarity_dict = self.w2c.create_similarity_dict(pos_bi_grams)
-        pos_n_grams = num if num == 2 else \
+        pos_n_grams = pos_bi_grams if num == 2 else \
             set(i for sublist in [tuple(itertools.combinations(g, num)) for g in pos_product] for i in sublist)
         similarity = [(ng, pos_similarity_dict.get(ng)) for ng in pos_n_grams]
 
@@ -61,5 +63,20 @@ class CodeNames:
         most_related = similarity_with_neg[-1]
 
         related_word_eng = self.w2c.get_similar_for_groups(most_related[0])
-        related_word_source = self.get_source_word_from_eng([related_word_eng])
-        return related_word_source, most_related
+        related_words_source = self.get_source_word_from_eng([related_word_eng[0][0]])
+        related_word_source = self.most_distant_word(related_words_source, pos_words)
+        most_related_set = set(most_related[0])
+        most_related_source = [pos_words[i] for i, w in enumerate(eng_trans_pos) if
+                               set(w).intersection(most_related_set)]
+
+        return related_word_source, most_related_source
+
+    def most_distant_word(self, words_to_choose, words_origin):
+        best = 10
+        selected_word = words_to_choose[0]
+        for word in words_to_choose:
+            distance = sorted([ld.distance(word, w) for w in words_origin])[-1]
+            if distance < best:
+                best = distance
+                selected_word = word
+        return selected_word

@@ -83,13 +83,15 @@ class Word2Vec:
         return n_gram_dict
 
     def get_negative_score_for_group(self, group: Iterable[str], negative: Iterable[str]) -> NGramSimilarityDict:
+        negative = [n for n in negative if n in self.kv]
+        group = [n for n in group if n in self.kv]
         group_avg_vector = numpy.average(tuple(self.kv.get_vector(w) for w in group), axis=0)
         neg_value = numpy.average(
             [self.cosine_similarity(self.kv.get_vector(w), group_avg_vector) for w in negative])
         return 0 if np.isnan(neg_value) else neg_value
 
     def get_similar_for_groups(self, positive: Iterable[str], negative: Iterable[str] = [],
-                               top_n=1) -> NGramSimilarityDict:
+                               top_n=3) -> NGramSimilarityDict:
         most_similar = self.kv.most_similar(positive, negative, top_n * 3, restrict_vocab=250000)
         # filter too similar words
         most_similar = [w for w in most_similar if min([distance(w[0], p) for p in positive]) > 3]

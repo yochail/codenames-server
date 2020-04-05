@@ -18,4 +18,5 @@ COPY src ./src
 
 #RUN GUNICORN SERVER AND EXPOSE PORT FOR LISTENING
 EXPOSE 80
-ENTRYPOINT ["gunicorn","-b", "0.0.0.0:80","src.server:app"]
+ENTRYPOINT ["gunicorn"]
+CMD ["-b", "0.0.0.0:80","src.server:app","--timeout", "300","--worker-class","gthread"]

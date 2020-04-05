@@ -1,6 +1,6 @@
 # codenames-server
 
-local build command: docker build --rm  -f "Dockerfile" -t word2vec:latest .
+local build command: docker build --rm  -f "Dockerfile" -t yochail/hebword2vec .
 docker push yochail/hebword2vec
 run locally (on port 8080): docker run -p 8080:80 word2vec
 

@@ -40,5 +40,8 @@ class Translate():
                     for word in translations:
                         translations = [w for w in translations if word not in w or w == word]
                 if translations:
-                    words_res.append(translations)
+                    words_res.append(self.filter_words(translations))
         return words_res
+
+    def filter_words(self,words):
+        return list(w for w in map(lambda w:w.replace(r"\(.*\)",""),words) if (len(w.split(' ')) == 1))

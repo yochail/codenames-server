@@ -5,7 +5,6 @@ from threading import Thread
 from flask import Flask, request, jsonify, abort
 from flask_cors import CORS
 
-from src import word2vec as w2v
 from src.codenames import CodeNames
 from src.translate import Translate
 from src.word2vec import Word2Vec
@@ -23,7 +22,8 @@ class FlaskApp(Flask):
             #    lib = "wiki2vec"
             # wv = w2v.gensim_from_vsmlib("../data/" + lib)
             w2v = Word2Vec()
-            w2v.load_word2vec_format('data/wiki2vec/gen/words100en')
+            #w2v.load_word2vec_format('data_ignore/wiki-news/wiki-news-300d-1M.vec')
+            w2v.load_word2vec_format('data/wiki-news/words100en')
             trans = Translate('src/my_config.json')
             return CodeNames(trans, w2v)
         except Exception as e:
